@@ -1,0 +1,207 @@
+<!--
+  Belge Arşivi sayfa şablonu (Öğrenci Gelişim Sistemi).
+  Yayınlarken {{BASLIK}} (ör. "Deniz Başvuru Dosyası"), {{ACIKLAMA}} (hedefi anlatan 1–2 cümle), {{OGRENCI}} ve {{SAAT_DILIMI}} alanlarını doldur.
+  Gerekli sayfa yetenekleri: db, assets (dosya deposu), downloads.
+  Koleksiyonlar: "gereksinimler" (ad, asama, sira, aciklama, hedef YYYY-AA-GG, hedefMetin) ve
+  "belgeler" (ad, kategori, tarih, gereksinim, not, assetId, dosyaAdi, tur, boyutKB, eklenme, ekleyen).
+  Gereksinimleri yayından sonra veritabanına yaz (sayfaya gömme). Bir belge bir gereksinime bağlanınca o gereksinim "tamam" sayılır.
+-->
+<title>{{BASLIK}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Archivo:wght@400;500;600&display=swap">
+<style>
+/* Layout: üstte hazırlık göstergesi, ortada aşama aşama gerekli belgeler listesi, altta kategori kategori arşiv ve belge ekleme formu */
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --fg:#16202f; --muted:#59657a; --line:#dde2ea;
+  --accent:#1f4fb0; --accent-soft:#e3ebfb; --ok:#1d7a4c; --ok-soft:#e2f3ea; --warn:#a85a00; --warn-soft:#fdf0dc;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141c; --surface:#17202c; --fg:#e7ecf3; --muted:#9aa6ba; --line:#2a3546;
+  --accent:#7aa2f2; --accent-soft:#1c2a47; --ok:#4cc38a; --ok-soft:#14302a; --warn:#f0b057; --warn-soft:#3a2a12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141c; --surface:#17202c; --fg:#e7ecf3; --muted:#9aa6ba; --line:#2a3546;
+  --accent:#7aa2f2; --accent-soft:#1c2a47; --ok:#4cc38a; --ok-soft:#14302a; --warn:#f0b057; --warn-soft:#3a2a12; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:780px;margin:0 auto;padding-inline:16px;padding-block:20px 56px;display:grid;gap:26px}
+h1{font-family:var(--display);font-weight:700;font-size:2.3rem;line-height:1;margin:0;text-wrap:balance}
+.lead{margin:6px 0 0;color:var(--muted);max-width:62ch}
+h2{font-family:var(--display);font-weight:600;font-size:1.3rem;letter-spacing:.04em;text-transform:uppercase;margin:0;color:var(--muted)}
+h3{font-family:var(--display);font-weight:600;font-size:1.1rem;margin:0}
+section{display:grid;gap:12px}
+.meter{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:8px}
+.meter .row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.meter b{font-family:var(--display);font-size:2rem;line-height:1;font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0}
+.phase{display:grid;gap:8px}
+.req{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.dot{width:12px;height:12px;border-radius:50%;margin-top:6px;border:2px solid var(--muted)}
+.req.done .dot{background:var(--ok);border-color:var(--ok)}
+.req.due .dot{border-color:var(--warn);background:var(--warn-soft)}
+.req .t{font-weight:600}
+.req .s{font-size:.85rem;color:var(--muted)}
+.pill{font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;background:var(--line);color:var(--fg)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.cat{display:grid;gap:8px}
+.doc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.doc .t{font-weight:600;overflow-wrap:anywhere}
+.doc .s{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+.doc img{max-width:96px;max-height:72px;border-radius:6px;border:1px solid var(--line);display:block;margin-top:6px}
+button,.btn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--accent);color:#fff}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button:disabled{opacity:.6;cursor:progress}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--muted)}
+form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:grid;gap:4px;font-size:.85rem;font-weight:600}
+input,select,textarea{font:inherit;font-weight:400;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+textarea{min-height:64px;resize:vertical}
+.note{font-size:.85rem;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;max-width:calc(100% - 32px)}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}.doc{grid-template-columns:1fr}.req{grid-template-columns:auto minmax(0,1fr)}.req .pill{grid-column:2;justify-self:start}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>{{BASLIK}}</h1>
+    <p class="lead">{{ACIKLAMA}}</p>
+  </header>
+
+  <div class="meter" aria-live="polite">
+    <div class="row"><span><b id="mDone">–</b> / <span id="mAll">–</span> gerekli belge hazır</span><span class="note" id="mNext">Yükleniyor…</span></div>
+    <div class="bar"><i id="mBar"></i></div>
+  </div>
+
+  <section aria-labelledby="hReq">
+    <h2 id="hReq">Gerekli belgeler</h2>
+    <div id="reqs"><div class="empty">Gerekli belge listesi yükleniyor.</div></div>
+  </section>
+
+  <section aria-labelledby="hDocs">
+    <h2 id="hDocs">Arşiv</h2>
+    <div id="docs"><div class="empty">Henüz belge yok. Aşağıdaki formla ya da Claude'a göndererek ilk belgeyi ekleyin.</div></div>
+  </section>
+
+  <section aria-labelledby="hAdd" id="addSec">
+    <h2 id="hAdd">Belge ekle</h2>
+    <form id="f" novalidate>
+      <label for="fFile">Dosya (PDF ya da fotoğraf, en fazla 20 MB)<input id="fFile" type="file" accept="application/pdf,image/*" required></label>
+      <div class="grid2">
+        <label for="fTitle">Belge adı<input id="fTitle" type="text" placeholder="ör. 8. sınıf 1. dönem karnesi" required></label>
+        <label for="fCat">Kategori<select id="fCat"></select></label>
+        <label for="fDate">Belge tarihi<input id="fDate" type="date"></label>
+        <label for="fReq">Karşıladığı gereklilik<select id="fReq"><option value="">Yok / genel arşiv</option></select></label>
+      </div>
+      <label for="fNote">Not (puan, kurum, geçerlilik…)<textarea id="fNote" placeholder="ör. sınav adı, toplam puan, alt puanlar, geçerlilik tarihi"></textarea></label>
+      <div><button type="submit" id="fBtn">Arşive ekle</button></div>
+      <p class="note">Belgeyi Claude'a sohbette göndermek de yeterli: "Bu, {{OGRENCI}} için 1. dönem karnesi; arşive ekle." Claude bilgileri okuyup buraya işler.</p>
+    </form>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const CATS=[["kimlik","Kimlik ve pasaport"],["akademik","Karneler ve akademik sonuçlar"],["dil","Dil sertifikaları"],["spor","Spor"],["muzik","Müzik"],["referans","Referans mektupları"],["saglik","Sağlık ve aşı"],["odul","Ödüller ve sertifikalar"],["diger","Diğer"]];
+  const catName=k=>(CATS.find(c=>c[0]===k)||[k,"Diğer"])[1];
+  let db=null, assets=null, downloads=null, reqs=[], docs=[];
+
+  function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,3400);}
+  function fmt(d){if(!d)return"";try{return new Date(d.length===10?d+"T12:00:00":d).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric",timeZone:"{{SAAT_DILIMI}}"});}catch(e){return d;}}
+  function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+
+  function render(){
+    const done=reqs.filter(r=>docs.some(d=>d.gereksinim===r.id));
+    $("mDone").textContent=done.length; $("mAll").textContent=reqs.length;
+    $("mBar").style.width=(reqs.length?Math.round(done.length/reqs.length*100):0)+"%";
+    const open=reqs.filter(r=>!docs.some(d=>d.gereksinim===r.id)).sort((a,b)=>String(a.hedef||"").localeCompare(String(b.hedef||"")));
+    $("mNext").textContent=open.length?("Sıradaki: "+open[0].ad+(open[0].hedefMetin?" · "+open[0].hedefMetin:"")):"Tüm gerekli belgeler hazır.";
+    // gereklilikler, aşamaya göre
+    const box=$("reqs"); box.replaceChildren();
+    if(!reqs.length){box.append(el("div","empty","Gerekli belge listesi henüz yok."));}
+    const phases=[...new Set(reqs.sort((a,b)=>(a.sira||0)-(b.sira||0)).map(r=>r.asama||"Genel"))];
+    const today=new Date().toISOString().slice(0,10);
+    phases.forEach(p=>{
+      const wrap=el("div","phase"); wrap.append(el("h3",null,p));
+      reqs.filter(r=>(r.asama||"Genel")===p).forEach(r=>{
+        const has=docs.filter(d=>d.gereksinim===r.id);
+        const due=!has.length && r.hedef && r.hedef<=today;
+        const row=el("div","req"+(has.length?" done":due?" due":""));
+        row.append(el("span","dot"));
+        const m=el("div"); m.append(el("div","t",r.ad));
+        const sub=[r.aciklama||""]; if(has.length) sub.unshift("Yüklendi: "+has.map(h=>h.ad).join(", "));
+        m.append(el("div","s",sub.filter(Boolean).join(" · ")));
+        row.append(m);
+        row.append(el("span","pill"+(has.length?" ok":due?" warn":""),has.length?"Hazır":(r.hedefMetin||"Bekliyor")));
+        wrap.append(row);
+      });
+      box.append(wrap);
+    });
+    // arşiv
+    const dbox=$("docs"); dbox.replaceChildren();
+    if(!docs.length){dbox.append(el("div","empty","Henüz belge yok. Aşağıdaki formla ya da Claude'a göndererek ilk belgeyi ekleyin."));}
+    CATS.forEach(([k,n])=>{
+      const list=docs.filter(d=>(d.kategori||"diger")===k).sort((a,b)=>String(b.tarih||"").localeCompare(String(a.tarih||"")));
+      if(!list.length)return;
+      const c=el("div","cat"); c.append(el("h3",null,n+" ("+list.length+")"));
+      list.forEach(d=>{
+        const row=el("div","doc"); const m=el("div");
+        m.append(el("div","t",d.ad));
+        const s=[]; if(d.tarih)s.push(fmt(d.tarih)); if(d.gereksinim){const r=reqs.find(x=>x.id===d.gereksinim); if(r)s.push("→ "+r.ad);} if(d.not)s.push(d.not);
+        m.append(el("div","s",s.join(" · ")));
+        if(d.tur&&String(d.tur).startsWith("image/")&&d.assetId){const im=document.createElement("img");im.alt=d.ad;im.src="/_blob/"+d.assetId;m.append(im);}
+        const b=el("button","ghost","İndir"); b.type="button"; b.id="dl-"+d.id; b.addEventListener("click",()=>dl(d,b));
+        row.append(m,b); c.append(row);
+      });
+      dbox.append(c);
+    });
+    // form seçenekleri
+    const fr=$("fReq"), cur=fr.value; fr.replaceChildren(new Option("Yok / genel arşiv",""));
+    reqs.slice().sort((a,b)=>(a.sira||0)-(b.sira||0)).forEach(r=>fr.append(new Option(r.ad,r.id)));
+    fr.value=cur;
+  }
+
+  async function dl(d,btn){
+    if(!d.assetId){toast("Bu belgenin dosyası eksik.");return;}
+    if(!downloads){toast("Bu görünümde indirme yok; Claude uygulamasında açın.");return;}
+    btn.disabled=true;
+    try{const r=await fetch("/_blob/"+d.assetId); if(!r.ok)throw 0; const bl=await r.blob();
+      await downloads.save({filename:d.dosyaAdi||(d.ad+(String(d.tur).includes("pdf")?".pdf":".jpg")),data:bl});}
+    catch(e){ if(!(e&&e.code==="declined")) toast("Belge indirilemedi. Biraz sonra tekrar deneyin."); }
+    finally{btn.disabled=false;}
+  }
+
+  $("fCat").append(...CATS.map(([k,n])=>new Option(n,k)));
+  $("f").addEventListener("submit",async ev=>{
+    ev.preventDefault();
+    const file=$("fFile").files[0], title=$("fTitle").value.trim();
+    if(!file||!title){toast("Dosya ve belge adı gerekli.");return;}
+    if(!assets||!db){toast("Belge eklemek için bu sayfanın sahibi olarak giriş yapın.");return;}
+    const btn=$("fBtn"); btn.disabled=true; btn.textContent="Yükleniyor…";
+    try{
+      const up=await assets.upload(file);
+      const id=new Date().toISOString().slice(0,10)+"-"+Math.random().toString(36).slice(2,8);
+      await db.doc("belgeler/"+id).set({ad:title,kategori:$("fCat").value,tarih:$("fDate").value||null,gereksinim:$("fReq").value||null,not:$("fNote").value.trim()||null,assetId:up.id,dosyaAdi:file.name,tur:file.type||up.contentType,boyutKB:Math.round(up.sizeBytes/1024),eklenme:new Date().toISOString(),ekleyen:"sayfa"});
+      $("f").reset(); toast("Arşive eklendi: "+title);
+    }catch(e){
+      const c=e&&e.code; toast(c==="too_large"?"Dosya 20 MB'tan büyük.":c==="unsupported_type"?"Bu dosya türü desteklenmiyor; PDF ya da fotoğraf yükleyin.":"Belge eklenemedi. Tekrar deneyin.");
+    }finally{btn.disabled=false; btn.textContent="Arşive ekle";}
+  });
+
+  async function start(){
+    try{downloads=await claude.use("downloads");}catch(e){}
+    try{assets=await claude.use("assets");}catch(e){}
+    try{db=await claude.use("db");}catch(e){}
+    if(!assets){$("addSec").hidden=true;}
+    if(!db){$("mNext").textContent="Belgeler yüklenemedi. Claude hesabına giriş yaptığınızdan emin olun.";return;}
+    db.collection("gereksinimler").onSnapshot(s=>{reqs=s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id},d.data()));render();},()=>{});
+    db.collection("belgeler").onSnapshot(s=>{docs=s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id},d.data()));render();},()=>{$("mNext").textContent="Belgeler yüklenemedi. Sayfayı yenileyin.";});
+  }
+  if(window.claude&&claude.use)start(); else $("mNext").textContent="Bu sayfayı Claude uygulamasında açın.";
+})();
+</script>

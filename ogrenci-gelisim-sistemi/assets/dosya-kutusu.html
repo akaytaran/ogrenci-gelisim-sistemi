@@ -1,0 +1,171 @@
+<!--
+  Dosya Kutusu sayfa şablonu (Öğrenci Gelişim Sistemi).
+  Yayınlarken: {{OGRENCI_IYELIK}} (ör. "Deniz'in") ve {{SAAT_DILIMI}} (ör. Europe/Istanbul) alanlarını doldur.
+  Gerekli sayfa yetenekleri: db (veritabanı), downloads (indirme). Dosyalar sayfanın dosya deposuna yüklenir.
+  Veritabanı koleksiyonu "dosyalar": ad, dosyaAdi, ders, aciklama, assetId, boyutKB, eklenme, indirildi, indirilme, hatirlatma, bildirildi.
+  Artifact aracı yoksa bu sayfayı kurma; dosyaları sohbette ve bulut klasöründe ver.
+-->
+<title>{{OGRENCI_IYELIK}} Dosya Kutusu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Archivo:wght@400;500;600&display=swap">
+<style>
+/* Layout: tek sütun, üstte skor tabelası gibi durum şeridi; altında "yeni" ve "indirilenler" rafları */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --fg:#17202e; --muted:#5b6578; --line:#dfe3ea;
+  --accent:#d9541e; --accent-soft:#fde9df; --ok:#1d7a4c; --ok-soft:#e3f3ea;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151d; --surface:#18202b; --fg:#e8ecf2; --muted:#9aa5b8; --line:#2a3443;
+  --accent:#f07a45; --accent-soft:#3a2219; --ok:#4cc38a; --ok-soft:#163026; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151d; --surface:#18202b; --fg:#e8ecf2; --muted:#9aa5b8; --line:#2a3443;
+  --accent:#f07a45; --accent-soft:#3a2219; --ok:#4cc38a; --ok-soft:#163026; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:22px}
+h1{font-family:var(--display);font-weight:700;font-size:2.3rem;line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+.lead{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.board div{padding:12px 14px;display:grid;gap:2px}
+.board div+div{border-left:1px solid var(--line)}
+.board b{font-family:var(--display);font-size:2rem;line-height:1;font-variant-numeric:tabular-nums}
+.board span{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.board .hot b{color:var(--accent)}
+.msg{font-weight:500}
+section{display:grid;gap:10px}
+h2{font-family:var(--display);font-weight:600;font-size:1.25rem;letter-spacing:.04em;text-transform:uppercase;margin:0;color:var(--muted)}
+.list{display:grid;gap:10px}
+.file{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.file.new{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
+.meta{min-width:0;display:grid;gap:4px}
+.top{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--fg)}
+.chip.new{background:var(--accent-soft);color:var(--accent)}
+.chip.done{background:var(--ok-soft);color:var(--ok)}
+.name{font-weight:600;overflow-wrap:anywhere}
+.sub{font-size:.85rem;color:var(--muted)}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;background:var(--accent);color:#fff;white-space:nowrap}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button:disabled{opacity:.6;cursor:progress}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:18px;color:var(--muted)}
+.note{font-size:.85rem;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;max-width:calc(100% - 32px)}
+@media (max-width:480px){.file{grid-template-columns:1fr}.file button{width:100%}h1{font-size:2rem}}
+@media (prefers-reduced-motion:no-preference){.file{transition:border-color .2s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>{{OGRENCI_IYELIK}} Dosya Kutusu</h1>
+    <p class="lead">Senin için hazırlanan özet notlar, testler ve diğer dosyalar buraya düşer. Yeni gelen dosyayı indir, telefonunda ya da bilgisayarında hazır olsun.</p>
+  </header>
+
+  <div class="board" aria-live="polite">
+    <div class="hot"><b id="cNew">–</b><span>Bekleyen</span></div>
+    <div><b id="cDone">–</b><span>İndirilen</span></div>
+    <div><b id="cAll">–</b><span>Toplam</span></div>
+  </div>
+  <p class="msg" id="msg">Dosyalar yükleniyor…</p>
+
+  <section aria-labelledby="hNew">
+    <h2 id="hNew">Yeni gelenler</h2>
+    <div class="list" id="listNew"><div class="empty">Dosyalar yükleniyor. Yeni bir dosya geldiğinde burada turuncu çerçeveyle görünecek.</div></div>
+  </section>
+
+  <section aria-labelledby="hDone">
+    <h2 id="hDone">İndirdiklerin</h2>
+    <div class="list" id="listDone"><div class="empty">Henüz indirdiğin dosya yok.</div></div>
+  </section>
+
+  <p class="note" id="note">Her dosya indirildiğinde kutu bunu kaydeder; indirilmeyen dosyalar için takvime nazik bir hatırlatma gelir.</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  let db = null, downloads = null, rows = [];
+
+  function toast(t){ const el=$("toast"); el.textContent=t; el.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>el.hidden=true,3200); }
+  function fmtDate(iso){ if(!iso) return ""; try{ return new Date(iso).toLocaleDateString("tr-TR",{day:"numeric",month:"long",timeZone:"{{SAAT_DILIMI}}"}); }catch(e){ return iso.slice(0,10); } }
+  function esc(s){ return String(s==null?"":s); }
+
+  function card(r){
+    const el=document.createElement("article");
+    el.className="file"+(r.indirildi?"":" new");
+    const meta=document.createElement("div"); meta.className="meta";
+    const top=document.createElement("div"); top.className="top";
+    const c1=document.createElement("span"); c1.className="chip"; c1.textContent=esc(r.ders||"Genel");
+    const c2=document.createElement("span"); c2.className="chip "+(r.indirildi?"done":"new"); c2.textContent=r.indirildi?"İndirildi":"Yeni";
+    top.append(c1,c2);
+    const nm=document.createElement("div"); nm.className="name"; nm.textContent=esc(r.ad);
+    const sub=document.createElement("div"); sub.className="sub";
+    const parts=[ "Geldi: "+fmtDate(r.eklenme) ];
+    if(r.boyutKB) parts.push(r.boyutKB+" KB");
+    if(r.indirildi && r.indirilme) parts.push("İndirdin: "+fmtDate(r.indirilme));
+    sub.textContent=parts.join(" · ");
+    meta.append(top,nm,sub);
+    if(r.aciklama){ const d=document.createElement("div"); d.className="sub"; d.textContent=esc(r.aciklama); meta.append(d); }
+    const btn=document.createElement("button");
+    btn.type="button"; btn.id="dl-"+r.id;
+    btn.textContent=r.indirildi?"Tekrar indir":"İndir";
+    if(r.indirildi) btn.className="ghost";
+    btn.addEventListener("click",()=>download(r,btn));
+    el.append(meta,btn);
+    return el;
+  }
+
+  function render(){
+    const nw=rows.filter(r=>!r.indirildi).sort((a,b)=>String(b.eklenme).localeCompare(String(a.eklenme)));
+    const dn=rows.filter(r=>r.indirildi).sort((a,b)=>String(b.indirilme||"").localeCompare(String(a.indirilme||"")));
+    $("cNew").textContent=nw.length; $("cDone").textContent=dn.length; $("cAll").textContent=rows.length;
+    $("msg").textContent = rows.length===0 ? "Kutu şimdilik boş. İlk dosya geldiğinde takvimine bildirim düşecek."
+      : nw.length===0 ? "Hepsi indirildi. Kutu tertemiz, aferin."
+      : nw.length===1 ? "1 dosya seni bekliyor. Tek tıkla indir, işin bitsin."
+      : nw.length+" dosya seni bekliyor. En yeniden başla.";
+    const ln=$("listNew"), ld=$("listDone"); ln.replaceChildren(); ld.replaceChildren();
+    if(!nw.length){ const e=document.createElement("div"); e.className="empty"; e.textContent="Bekleyen dosya yok."; ln.append(e); }
+    nw.forEach(r=>ln.append(card(r)));
+    if(!dn.length){ const e=document.createElement("div"); e.className="empty"; e.textContent="Henüz indirdiğin dosya yok."; ld.append(e); }
+    dn.forEach(r=>ld.append(card(r)));
+  }
+
+  async function markDone(r){
+    if(!db || r.indirildi) return;
+    try{ await db.doc("dosyalar/"+r.id).update({indirildi:true, indirilme:new Date().toISOString()}); }
+    catch(e){ toast("İndirildi bilgisi kaydedilemedi; sorun değil, dosya sende."); }
+  }
+
+  async function download(r,btn){
+    const url="/_blob/"+r.assetId;
+    if(!r.assetId){ toast("Bu dosyanın bağlantısı eksik. Ailene söyle."); return; }
+    if(!downloads){ window.open(url,"_blank"); await markDone(r); return; }
+    btn.disabled=true; const old=btn.textContent; btn.textContent="Hazırlanıyor…";
+    try{
+      const res=await fetch(url); if(!res.ok) throw new Error("fetch");
+      const blob=await res.blob();
+      const out=await downloads.save({filename:r.dosyaAdi||(r.ad+".pdf"), data:blob});
+      if(out && out.status==="saved"){ await markDone(r); toast("İndirildi: "+r.ad); }
+    }catch(e){
+      const code=e && e.code;
+      if(code==="declined") toast("İndirme iptal edildi. İstediğinde tekrar dene.");
+      else if(code==="rate_limited") toast("Bir indirme penceresi zaten açık.");
+      else toast("Dosya indirilemedi. Biraz sonra tekrar dene.");
+    }finally{ btn.disabled=false; btn.textContent=old; }
+  }
+
+  async function start(){
+    try{ downloads = await claude.use("downloads"); }catch(e){ downloads=null; }
+    try{ db = await claude.use("db"); }catch(e){ db=null; }
+    if(!db){ $("msg").textContent="Dosyalar şu an yüklenemedi. Claude hesabına giriş yaptığından emin ol."; return; }
+    db.collection("dosyalar").onSnapshot(snap=>{
+      rows = snap.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data()));
+      render();
+    }, err=>{ $("msg").textContent="Dosyalar yüklenemedi. Sayfayı yenile."; });
+  }
+  if(window.claude && claude.use) start(); else $("msg").textContent="Bu sayfayı Claude uygulamasında aç.";
+})();
+</script>
