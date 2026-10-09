@@ -250,6 +250,6 @@ Evet. Sınav ve müfredat bilgisi kurulumda web'den doğrulanır. Türkiye dış
 
 ## Katkı ve lisans
 
-Katkılar memnuniyetle karşılanır. Lütfen gerçek öğrenci verisi içeren hiçbir şey göndermeyin.
+Bu depo kod katkısına (pull request) kapalıdır; gelen PR'lar kapatılır. Hata bildirimi ve önerileriniz için [Issues](https://github.com/akaytaran/ogrenci-gelisim-sistemi/issues) bölümünü kullanabilirsiniz. Lütfen gerçek öğrenci verisi içeren hiçbir şey göndermeyin.
 
-Lisans: MIT. Ayrıntılar için LICENSE dosyasına bakın.
+Lisans: MIT © 2026 Ali Tutku Kaytaran. Ayrıntılar için LICENSE dosyasına bakın.
